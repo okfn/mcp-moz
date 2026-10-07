@@ -3,9 +3,10 @@ import json
 import pandas as pd
 import urllib.request
 
+from mcp.server.apps import Apps
 from mcp.server import MCPServer
 
-mcp = MCPServer("Demo")
+mcp = MCPServer("Demo", extensions=[Apps()])
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,6 @@ with urllib.request.urlopen('https://opendata-ajuntament.barcelona.cat/data/api/
     df = pd.DataFrame(data["result"]["records"])
     df.rename(columns={"Nombre": "Cantidad"}, inplace=True)
     df["Cantidad"] = df["Cantidad"].astype(int)
-    logger.info(df.head())
 
 @mcp.tool()
 def vehiculos_por_tipo_de_propulsion() -> dict[str, int]:
@@ -30,11 +30,4 @@ def vehiculos_por_tipo_de_propulsion() -> dict[str, int]:
 @mcp.tool()
 def add(a: int, b: int) -> int:
     """Add two numbers."""
-    logger.info(f"Executing add tool with {a} and {b}...")
     return a + b
-
-
-@mcp.resource("greeting://{name}")
-def greeting(name: str) -> str:
-    """Greet someone by name."""
-    return f"Hello, {name}!"
