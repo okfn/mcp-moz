@@ -64,6 +64,10 @@ apps = Apps()
 
 @apps.tool(resource_uri="ui://charts/bar.html", description="A simple bar chart.")
 def vehiculos_por_tipo_de_propulsion_barchart(ctx: Context) -> ChartConfig:
+    """Returns a chart for the distribution of vehículos por tipo de propulsión.
+
+    Data is from Barcelona's Open Data Portal and covers the year 2025.
+    """
     result = df.groupby("Tipus_Propulsio")["Cantidad"].sum()
     chart = ChartConfig(
         type="bar",
