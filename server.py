@@ -11,6 +11,17 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 
+### Get Sample Data for Analisis
+### https://opendata-ajuntament.barcelona.cat/data/es/dataset/est_vehicles_propulsio/resource/5b3dc38e-5c04-40af-97fe-d16e5c161c0d
+current_file = Path(__file__).resolve()
+script_dir = current_file.parent
+target_file = script_dir / "vehicles-2025.csv"
+df = pd.read_csv(target_file)
+df.rename(columns={"Nombre": "Cantidad"}, inplace=True)
+df["Cantidad"] = df["Cantidad"].astype(int)
+
+
+### Pydantic Models for returning Charts Configurations from tools.
 class Dataset(BaseModel):
     label: str
     data: list[float]
@@ -24,29 +35,16 @@ class ChartConfig(BaseModel):
     data: ChartData
 
 
-# Get absolute path of current script
-current_file = Path(__file__).resolve()
-
-# Get directory of current script
-script_dir = current_file.parent
-
-# Calculate path to another file relative to the script
-target_file = script_dir / "vehicles-2025.csv"
-df = pd.read_csv(target_file)
-df.rename(columns={"Nombre": "Cantidad"}, inplace=True)
-df["Cantidad"] = df["Cantidad"].astype(int)
-
+### Chart HTML to register as a UI Resource
 CHART_HTML = """\
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Chart.js Bar Chart</title>
+  <title>Chart</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-
   <canvas id="myChart"></canvas>
-
   <script>
     window.addEventListener("message", (event) => {
       console.log(event);
@@ -61,20 +59,8 @@ CHART_HTML = """\
 </html>
 """
 
+### Define the App Extension with the tool and resources to return charts.
 apps = Apps()
-
-@apps.tool(resource_uri="ui://charts/bar.html", description="A simple bar chart.")
-def get_barchart(ctx: Context) -> ChartConfig:
-    chart = ChartConfig(
-        type="bar",
-        data=ChartData(
-            labels=["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
-            datasets=[
-                Dataset(label="Votes", data=[12, 19, 3, 5, 2, 3])
-            ]
-        )
-    )
-    return chart
 
 @apps.tool(resource_uri="ui://charts/bar.html", description="A simple bar chart.")
 def vehiculos_por_tipo_de_propulsion_barchart(ctx: Context) -> ChartConfig:
@@ -97,6 +83,7 @@ apps.add_html_resource(
         csp=ResourceCsp(resource_domains=["https://cdn.jsdelivr.net"], connect_domains=["https://cdn.jsdelivr.net"])
         )
 
+### Create the MCP Server, register the extension and other tools.
 mcp = MCPServer("clock", extensions=[apps])
 
 @mcp.tool()
@@ -107,11 +94,3 @@ def vehiculos_por_tipo_de_propulsion() -> dict[str, int]:
     result = df.groupby("Tipus_Propulsio")["Cantidad"].sum()
     return result.to_dict()
 
-
-@mcp.tool()
-def add(a: int, b: int) -> int:
-    """Add two numbers."""
-    return a + b
-
-if __name__ == "__main__":
-    mcp.run()
