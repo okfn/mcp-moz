@@ -1,18 +1,15 @@
 import logging
-import json
+from pathlib import Path
+from typing import Literal
+
 import pandas as pd
-import urllib.request
-
-from datetime import datetime
-
-from mcp.server.apps import Apps, client_supports_apps, ResourceCsp
+from mcp.server.apps import Apps, ResourceCsp
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.context import Context
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
-from pydantic import BaseModel
-from typing import Literal
 
 class Dataset(BaseModel):
     label: str
@@ -26,7 +23,6 @@ class ChartConfig(BaseModel):
     type: Literal["bar", "line", "pie", "doughnut", "radar", "polarArea", "bubble", "scatter"]
     data: ChartData
 
-from pathlib import Path
 
 # Get absolute path of current script
 current_file = Path(__file__).resolve()
