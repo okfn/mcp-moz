@@ -2,142 +2,100 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>MCP Client</title>
+  <title>MCP Chat</title>
 </head>
 <body>
 
-<h1>MCP Client</h1>
+<h1>MCP Chat</h1>
 
-<h2>Tools</h2>
-<ul id="tools"></ul>
+<div id="chat"></div>
 
-<h2>Call a tool</h2>
-<form id="call-form">
-  <label for="tool">Tool</label><br>
-  <select id="tool" name="tool"></select><br><br>
-  <label for="arguments">Arguments (JSON)</label><br>
-  <textarea id="arguments" rows="5" cols="60">{}</textarea><br><br>
-  <button type="submit">Call</button>
+<form id="chat-form">
+  <label for="prompt">Message</label><br>
+  <input id="prompt" autocomplete="off">
+  <button type="submit">Send</button>
 </form>
 
-<h2>Result</h2>
-<div id="error"></div>
-<div id="result"></div>
-
 <script>
-  // Load the tool list and populate both the list and the call form's select.
-  async function loadTools() {
-    const response = await fetch('/api/tools');
-    const data = await response.json();
-    if (!response.ok) {
-      showError(data.error);
-      return;
-    }
-    const list = document.getElementById('tools');
-    const select = document.getElementById('tool');
-    for (const tool of data.tools) {
-      const item = document.createElement('li');
-      const name = document.createElement('strong');
-      name.textContent = tool.name;
-      item.append(name, ' \u2014 ' + tool.description);
-      if (tool.resourceUri) {
-        const note = document.createElement('em');
-        note.textContent = ' (UI resource: ' + tool.resourceUri + ')';
-        item.appendChild(note);
-      }
-      list.appendChild(item);
+  // Conversation history (user/assistant turns) kept client-side.
+  const history = [];
 
-      const option = document.createElement('option');
-      option.value = tool.name;
-      option.textContent = tool.name;
-      select.appendChild(option);
-    }
+  function addMessage(role, text) {
+    const chat = document.getElementById('chat');
+    const p = document.createElement('p');
+    const name = document.createElement('strong');
+    name.textContent = role + ': ';
+    p.append(name, document.createTextNode(text));
+    chat.appendChild(p);
+    return p;
   }
 
-  document.getElementById('call-form').addEventListener('submit', async (event) => {
+  function addError(text) {
+    const p = addMessage('ERROR', text);
+    return p;
+  }
+
+  // Render a UI artifact inline in the conversation: a ui:// resource (MCP Apps
+  // extension) loaded in a sandboxed iframe, with the tool result delivered to
+  // it as a notifications/call_tool_result JSON-RPC notification.
+  function renderArtifact(artifact) {
+    const chat = document.getElementById('chat');
+    const heading = document.createElement('h3');
+    heading.textContent = 'UI resource: ' + artifact.resourceUri;
+    chat.appendChild(heading);
+
+    const frame = document.createElement('iframe');
+    frame.setAttribute('sandbox', 'allow-scripts');
+    frame.setAttribute('title', 'MCP App');
+    frame.width = '100%';
+    frame.height = '560';
+    frame.addEventListener('load', () => {
+      frame.contentWindow.postMessage({
+        jsonrpc: '2.0',
+        method: 'notifications/call_tool_result',
+        params: artifact.result,
+      }, '*');
+    });
+    // Attach the frame first, set src last, so the load listener is
+    // guaranteed to be in place before navigation starts.
+    chat.appendChild(frame);
+    frame.src = '/ui-resource?uri=' + encodeURIComponent(artifact.resourceUri);
+  }
+
+  document.getElementById('chat-form').addEventListener('submit', async (event) => {
     event.preventDefault();
-    hideError();
-    const tool = document.getElementById('tool').value;
-    let arguments;
+    const input = document.getElementById('prompt');
+    const text = input.value.trim();
+    if (!text) return;
+
+    addMessage('You', text);
+    history.push({ role: 'user', content: text });
+    input.value = '';
+
+    const thinking = addMessage('Assistant', '... thinking ...');
     try {
-      arguments = JSON.parse(document.getElementById('arguments').value || '{}');
-    } catch (e) {
-      showError('Arguments are not valid JSON: ' + e.message);
-      return;
-    }
-    try {
-      const response = await fetch('/api/call', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tool, arguments }),
+        body: JSON.stringify({ messages: history }),
       });
       const data = await response.json();
+      thinking.remove();
       if (!response.ok) {
-        showError(data.error);
+        addError(data.error);
         return;
       }
-      renderResult(data);
+      const reply = data.reply || '(no reply)';
+      addMessage('Assistant', reply);
+      history.push({ role: 'assistant', content: reply });
+      for (const artifact of data.artifacts || []) {
+        renderArtifact(artifact);
+      }
     } catch (e) {
-      showError('Request failed: ' + e.message);
+      thinking.remove();
+      addError('Request failed: ' + e.message);
     }
   });
-
-  // Render the tool result; when the tool has a ui:// resource (MCP Apps
-  // extension), load it in a sandboxed iframe and deliver the tool result to
-  // it as a notifications/call_tool_result JSON-RPC notification.
-  function renderResult(data) {
-    const result = document.getElementById('result');
-    result.replaceChildren();
-
-    const resultParams = data.result;
-    if (resultParams.structuredContent) {
-      const pre = document.createElement('pre');
-      pre.textContent = JSON.stringify(resultParams.structuredContent, null, 2);
-      result.appendChild(pre);
-    } else {
-      const pre = document.createElement('pre');
-      pre.textContent = JSON.stringify(resultParams.content, null, 2);
-      result.appendChild(pre);
-    }
-
-    if (data.resourceUri) {
-      const heading = document.createElement('h3');
-      heading.textContent = 'UI resource: ' + data.resourceUri;
-      result.appendChild(heading);
-
-      const frame = document.createElement('iframe');
-      frame.id = 'app-frame';
-      frame.setAttribute('sandbox', 'allow-scripts');
-      frame.setAttribute('title', 'MCP App');
-      frame.width = '100%';
-      frame.height = '480';
-      frame.addEventListener('load', () => {
-        frame.contentWindow.postMessage({
-          jsonrpc: '2.0',
-          method: 'notifications/call_tool_result',
-          params: resultParams,
-        }, '*');
-      });
-      // Attach the frame first, set src last, so the load listener is
-      // guaranteed to be in place before navigation starts.
-      result.appendChild(frame);
-      frame.src = '/ui-resource?uri=' + encodeURIComponent(data.resourceUri);
-    }
-  }
-
-  function showError(message) {
-    const error = document.getElementById('error');
-    error.replaceChildren();
-    const pre = document.createElement('pre');
-    pre.textContent = 'ERROR: ' + message;
-    error.appendChild(pre);
-  }
-
-  function hideError() {
-    document.getElementById('error').replaceChildren();
-  }
-
-  loadTools();
 </script>
 
 </body>
