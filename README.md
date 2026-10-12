@@ -45,4 +45,4 @@ the model calls the MCP tool and the chart renders in the conversation.
 
 ## Screenshot
 
-![A screenshot of the app showing the chat application with a rendered UI element.]("./readme.png")
+![A screenshot of the app showing the chat application with a rendered UI element.](readme.png)
