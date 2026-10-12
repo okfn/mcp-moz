@@ -1,6 +1,6 @@
 # mcp-moz
 
-A small MCP playground: an MCP server with a UI extension (MCP Apps), and a chat app
+A small MCP playground for demoing at MozFest 2026: an MCP server with a UI extension (MCP Apps), and a chat app
 that acts as an MCP host — it talks to a chat model, lets the model call the server's
 tools, and renders any `ui://` resource (a Chart.js chart) inline in the conversation.
 
@@ -11,8 +11,6 @@ tools, and renders any `ui://` resource (a Chart.js chart) inline in the convers
 | `server.py` | MCP server (streamable-http, port 8000) with tools over Barcelona 2025 vehicle data. Includes an MCP Apps extension binding the barchart tool to the `ui://charts/bar.html` Chart.js resource. |
 | `app.py` | Starlette chat app (port 8080). Agent loop: Model → MCP tool calls → final reply. UI-bound tool results are returned as artifacts for inline rendering. |
 | `index.html` | Chat front end (plain HTML/JS, no CSS). Loads `ui://` resources in sandboxed iframes and delivers tool results via `notifications/call_tool_result`. |
-| `client.py` | Minimal MCP client example. |
-| `test_server.py` | Pytest tests for the server. |
 | `vehicles-2025.csv` | Sample data ([Barcelona Open Data](https://opendata-ajuntament.barcelona.cat/data/es/dataset/est_vehicles_propulsio)). |
 
 ## Setup
