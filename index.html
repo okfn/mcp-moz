@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <title>MCP Chat</title>
 </head>
-<body>
+<body style="margin-inline: auto; width: 65%;">
 
 <h1>MCP Chat</h1>
 
@@ -48,7 +48,7 @@
     frame.setAttribute('sandbox', 'allow-scripts');
     frame.setAttribute('title', 'MCP App');
     frame.width = '100%';
-    frame.height = '560';
+    frame.height = '400';
     frame.addEventListener('load', () => {
       frame.contentWindow.postMessage({
         jsonrpc: '2.0',
@@ -72,7 +72,7 @@
     history.push({ role: 'user', content: text });
     input.value = '';
 
-    const thinking = addMessage('Assistant', '... thinking ...');
+    const thinking = addMessage('Assistant', '... processing ...');
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
