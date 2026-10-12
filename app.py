@@ -24,8 +24,7 @@ Routes:
 * GET  /ui-resource -> proxies a ``ui://`` resource (read via resources/read) so the
                        iframe can load it by URL
 
-Configuration (env or .env): API_KEY / GLM_API_KEY, GLM_MODEL (default glm-5.3),
-GLM_BASE_URL (default https://api.z.ai/api/paas/v4), MCP_SERVER_URL.
+Configuration (env or .env): API_KEY, AI_MODEL, AI_BASE_URL, MCP_SERVER_URL.
 
 Run with:  uv run uvicorn app:app --port 8080
 """
@@ -59,7 +58,9 @@ INDEX_HTML = HERE / "index.html"
 SYSTEM_PROMPT = (
     "You are a helpful assistant connected to an MCP server with tools."
     "Call the available tools whenever they help answer the user's question,"
-    "then summarize the results. Reply in the user's language."
+    "then summarize the results."
+    "Reply in the user's language and with text (no markdown)."
+
 )
 
 MAX_TOOL_ROUNDS = 4
