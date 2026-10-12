@@ -5,8 +5,7 @@ from typing import Literal
 import pandas as pd
 from mcp.server.apps import Apps, ResourceCsp
 from mcp.server.mcpserver import MCPServer
-from mcp.server.mcpserver.context import Context
-from pydantic import BaseModel, model_serializer
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -24,22 +23,17 @@ df["Cantidad"] = df["Cantidad"].astype(int)
 ### Pydantic Model for returning Charts Configurations from tools.
 ### Each App Extension tool is responsible for definining how to render the data
 ### By returning a ChartConfig.
+class Dataset(BaseModel):
+    label: str
+    data: list[float]
+
+class ChartData(BaseModel):
+    labels: list[str]
+    datasets: list[Dataset]
+
 class ChartConfig(BaseModel):
     type: Literal["bar", "line", "pie", "doughnut", "radar", "polarArea", "bubble", "scatter"]
-    labels: list[str]
-    datasets: dict[str, list[float]]
-
-    @model_serializer
-    def _chartjs(self) -> dict:
-        return {
-            "type": self.type,
-            "data": {
-                "labels": self.labels,
-                "datasets": [
-                    {"label": label, "data": data} for label, data in self.datasets.items()
-                ],
-            },
-        }
+    data: ChartData
 
 
 ### Chart HTML to register as a UI Resource
@@ -84,7 +78,7 @@ apps.add_html_resource(
 
 ### An Extension Tool that uses the registered HTML (resource), does a data calculation and return a ChartConfig.
 @apps.tool(resource_uri="ui://charts/bar.html", description="A simple bar chart.")
-def vehiculos_por_tipo_de_propulsion_barchart(ctx: Context) -> ChartConfig:
+def vehiculos_por_tipo_de_propulsion_barchart() -> ChartConfig:
     """Returns a chart for the distribution of vehículos por tipo de propulsión.
 
     Data is from Barcelona's Open Data Portal and covers the year 2025.
@@ -92,8 +86,12 @@ def vehiculos_por_tipo_de_propulsion_barchart(ctx: Context) -> ChartConfig:
     result = df.groupby("Tipus_Propulsio")["Cantidad"].sum()
     return ChartConfig(
         type="bar",
-        labels=result.index.tolist(),
-        datasets={"Cantidad": result.values.tolist()},
+        data=ChartData(
+            labels=result.index.tolist(),
+            datasets=[
+                Dataset(label="Cantidad", data=result.values.tolist())
+            ]
+        )
     )
 
 
