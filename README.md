@@ -42,3 +42,7 @@ uv run uvicorn app:app --port 8080
 
 Open http://localhost:8080 and ask for a chart of vehicles by propulsion type —
 the model calls the MCP tool and the chart renders in the conversation.
+
+## Screenshot
+
+![A screenshot of the app showing the chat application with a rendered UI element.]("./readme.png")
