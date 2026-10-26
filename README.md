@@ -34,7 +34,7 @@ MCP_SERVER_URL=http://localhost:8000/mcp
 
 ```bash
 # 1. MCP server (terminal 1)
-uv run mcp run --transport streamable-http server.py --port 8000
+uv run mcp run --transport streamable-http server.py
 
 # 2. Chat app (terminal 2)
 uv run uvicorn app:app --port 8080
