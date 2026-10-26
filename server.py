@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 ### Get Sample Data for Analisis
-### https://opendata-ajuntament.barcelona.cat/data/es/dataset/est_vehicles_propulsio/resource/5b3dc38e-5c04-40af-97fe-d16e5c161c0d
+DATA_SOURCE_URL = "https://opendata-ajuntament.barcelona.cat/data/es/dataset/est_vehicles_propulsio/resource/5b3dc38e-5c04-40af-97fe-d16e5c161c0d"
 current_file = Path(__file__).resolve()
 script_dir = current_file.parent
 target_file = script_dir / "vehicles-2025.csv"
@@ -34,6 +34,8 @@ class ChartData(BaseModel):
 class ChartConfig(BaseModel):
     type: Literal["bar", "line", "pie", "doughnut", "radar", "polarArea", "bubble", "scatter"]
     data: ChartData
+    source: str | None = None
+    """Optional link to the data source, rendered as a link under the chart."""
 
 
 ### Chart HTML to register as a UI Resource
@@ -49,13 +51,23 @@ CHART_HTML = """\
 </head>
 <body>
   <canvas id="myChart"></canvas>
+  <p><a id="source" href="#" target="_blank" rel="noopener noreferrer" hidden>View data source</a></p>
   <script>
     window.addEventListener("message", (event) => {
       console.log(event);
-      const chartConfig = event.data?.params?.structuredContent;
-      if (chartConfig) {
+      const result = event.data?.params?.structuredContent;
+      if (result) {
+        const { source, ...chartConfig } = result;
         const ctx = document.getElementById('myChart');
         new Chart(ctx, chartConfig);
+        if (source) {
+          const link = document.getElementById('source');
+          let host = source;
+          try { host = new URL(source).hostname; } catch {}
+          link.href = source;
+          link.textContent = `View data source (${host})`;
+          link.hidden = false;
+        }
       }
     });
   </script>
@@ -91,7 +103,8 @@ def vehiculos_por_tipo_de_propulsion_barchart() -> ChartConfig:
             datasets=[
                 Dataset(label="Cantidad", data=result.values.tolist())
             ]
-        )
+        ),
+        source=DATA_SOURCE_URL,
     )
 
 
@@ -104,7 +117,8 @@ mcp = MCPServer("clock", extensions=[apps])
 def vehiculos_por_tipo_de_propulsion() -> dict[str, int]:
     """Returns a table with statistics of the amount of vehicles by propulsion system.
 
-    It covers the city of Barcelona and the year 2025."""
+    It covers the city of Barcelona and the year 2025.
+    Source: """ + DATA_SOURCE_URL
     result = df.groupby("Tipus_Propulsio")["Cantidad"].sum()
     return result.to_dict()
 
