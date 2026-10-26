@@ -38,6 +38,12 @@ class ChartConfig(BaseModel):
     """Optional link to the data source, rendered as a link under the chart."""
 
 
+class TableData(BaseModel):
+    """Statistics plus the link to the data source, returned by plain MCP tools."""
+    data: dict[str, int]
+    source: str
+
+
 ### Chart HTML to register as a UI Resource
 ### A single HTML that draws a ChartJS chart.
 ### It listens to what the tool returns (ChartConfig) and renders it.
@@ -114,11 +120,11 @@ mcp = MCPServer("clock", extensions=[apps])
 
 ### A normal MCP Tool that returns text and structuredContent.
 @mcp.tool()
-def vehiculos_por_tipo_de_propulsion() -> dict[str, int]:
+def vehiculos_por_tipo_de_propulsion() -> TableData:
     """Returns a table with statistics of the amount of vehicles by propulsion system.
 
     It covers the city of Barcelona and the year 2025.
     Source: """ + DATA_SOURCE_URL
     result = df.groupby("Tipus_Propulsio")["Cantidad"].sum()
-    return result.to_dict()
+    return TableData(data=result.to_dict(), source=DATA_SOURCE_URL)
 
